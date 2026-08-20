@@ -4,7 +4,9 @@ import { games } from "../games.js";
 import type { Game } from "../types/Game.js";
 
 type LeaveGameResult =
-  | { readonly success: true }
+  | {
+      readonly success: true;
+    }
   | {
       readonly success: false;
       readonly error: "gameNotFound" | "playerNotFound";

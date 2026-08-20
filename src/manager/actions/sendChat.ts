@@ -3,8 +3,13 @@ import { games } from "../games.js";
 import type { ChatMessage } from "../types/ChatMessage.js";
 
 type SendChatResult =
-  | { readonly success: true }
-  | { readonly success: false; error: "gameNotFound" | "playerNotFound" };
+  | {
+      readonly success: true;
+    }
+  | {
+      readonly success: false;
+      error: "gameNotFound" | "playerNotFound";
+    };
 
 export function sendChat(
   gameId: string,

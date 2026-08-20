@@ -9,6 +9,17 @@ import type {
   StartGameResult,
 } from "../server/index.js";
 
+export type {
+  CreateGameResult,
+  GetClientStateAndClearEventsResult,
+  GetEventsAndClearAcknowledgedResult,
+  GetJoinableGamesResult,
+  JoinGameResult,
+  LeaveGameResult,
+  SendChatResult,
+  StartGameResult,
+};
+
 export class Client {
   private readonly baseUrl: string;
 

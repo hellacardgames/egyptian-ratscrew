@@ -1,7 +1,7 @@
 import type { ChatMessage } from "./ChatMessage.js";
 
 export type ClientState = {
-  readonly status: "open" | "started" | "completed" | "forfeited";
+  readonly status: "created" | "started" | "completed" | "forfeited";
   readonly gameId: string;
   readonly playerId: string;
   readonly username: string;

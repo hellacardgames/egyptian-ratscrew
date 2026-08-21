@@ -104,7 +104,7 @@ export class Manager extends ManagerBase<Game> {
     };
     const createdAt = Date.now();
     const game: Game = {
-      status: "open",
+      status: "created",
       id: crypto.randomUUID(),
       createdAt,
       expiresAt: createdAt + EXPIRY_EXTENSION_MS,
@@ -165,7 +165,7 @@ export class Manager extends ManagerBase<Game> {
   getJoinableGames(): GetJoinableGamesResult {
     return {
       games: Array.from(this.games.values())
-        .filter((g) => g.status === "open" && g.players.length < MAX_PLAYERS)
+        .filter((g) => g.status === "created" && g.players.length < MAX_PLAYERS)
         .map((g) => ({
           id: g.id,
           numPlayers: g.players.length,
@@ -178,7 +178,7 @@ export class Manager extends ManagerBase<Game> {
     if (!game) {
       return { success: false, error: "gameNotFound" };
     }
-    if (game.status !== "open") {
+    if (game.status !== "created") {
       return { success: false, error: "invalidStatus" };
     }
     if (game.players.length === MAX_PLAYERS) {
@@ -260,7 +260,7 @@ export class Manager extends ManagerBase<Game> {
     if (!player) {
       return { success: false, error: "playerNotFound" };
     }
-    if (game.status !== "open") {
+    if (game.status !== "created") {
       return { success: false, error: "invalidStatus" };
     }
     if (game.players.indexOf(player) !== 0) {

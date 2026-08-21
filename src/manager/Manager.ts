@@ -1,11 +1,15 @@
 import { ManagerBase } from "@hellacardgames/lib";
-import { EXPIRY_EXTENSION_MS, MAX_PLAYERS, MIN_PLAYERS } from "./constants.js";
-import { emitEvent } from "../lib/emitEvent.js";
-import type { ChatMessage } from "./types/ChatMessage.js";
-import type { ClientState } from "./types/ClientState.js";
-import type { Game } from "./types/Game.js";
-import type { GameEvent } from "./types/GameEvent.js";
-import type { Player } from "./types/Player.js";
+import {
+  createGame,
+  getClientStateAndClearEvents,
+  getEventsAndClearAcknowledged,
+  joinGame,
+  leaveGame,
+  MAX_PLAYERS,
+  sendChat,
+  startGame,
+} from "../game/index.js";
+import type { ClientState, Game, GameEvent } from "../game/index.js";
 
 export type CreateGameResult =
   | {
@@ -74,7 +78,7 @@ export type SendChatResult =
     }
   | {
       readonly success: false;
-      error: "gameNotFound" | "playerNotFound";
+      readonly error: "gameNotFound" | "playerNotFound";
     };
 
 export type StartGameResult =
@@ -85,8 +89,8 @@ export type StartGameResult =
       readonly success: false;
       readonly error:
         | "gameNotFound"
-        | "playerNotFound"
         | "invalidStatus"
+        | "playerNotFound"
         | "playerNotAdmin"
         | "minPlayersNotReached";
     };
@@ -96,23 +100,9 @@ export class Manager extends ManagerBase<Game> {
     if (this.games.size === this.maxGames) {
       return { success: false, error: "maxGamesReached" };
     }
-    const player: Player = {
-      id: crypto.randomUUID(),
-      userId,
-      username,
-      events: [],
-    };
-    const createdAt = Date.now();
-    const game: Game = {
-      status: "created",
-      id: crypto.randomUUID(),
-      createdAt,
-      expiresAt: createdAt + EXPIRY_EXTENSION_MS,
-      chatMessages: [],
-      players: [player],
-    };
-    this.games.set(game.id, game);
-    return { success: true, gameId: game.id, playerId: player.id };
+    const result = createGame(userId, username);
+    this.games.set(result.game.id, result.game);
+    return { success: true, gameId: result.game.id, playerId: result.playerId };
   }
 
   getClientStateAndClearEvents(
@@ -123,23 +113,12 @@ export class Manager extends ManagerBase<Game> {
     if (!game) {
       return { success: false, error: "gameNotFound" };
     }
-    const player = game.players.find((p) => p.id === playerId);
-    if (!player) {
-      return { success: false, error: "playerNotFound" };
+    const result = getClientStateAndClearEvents(game, playerId);
+    if (!result.success) {
+      return result;
     }
-    const state: ClientState = {
-      status: game.status,
-      gameId,
-      playerId,
-      username: player.username,
-      players: game.players.map((p) => ({
-        username: p.username,
-      })),
-      expiresAt: game.expiresAt,
-      chatMessages: game.chatMessages,
-    };
-    player.events.length = 0;
-    return { success: true, state };
+    this.games.set(gameId, result.game);
+    return { success: true, state: result.state };
   }
 
   getEventsAndClearAcknowledged(
@@ -151,15 +130,12 @@ export class Manager extends ManagerBase<Game> {
     if (!game) {
       return { success: false, error: "gameNotFound" };
     }
-    const player = game.players.find((p) => p.id === playerId);
-    if (!player) {
-      return { success: false, error: "playerNotFound" };
+    const result = getEventsAndClearAcknowledged(game, playerId, lastReadId);
+    if (!result.success) {
+      return result;
     }
-    const lastReadEventIndex = player.events.findIndex(
-      (e) => e.id === lastReadId,
-    );
-    player.events.splice(0, lastReadEventIndex + 1);
-    return { success: true, events: player.events };
+    this.games.set(gameId, result.game);
+    return { success: true, events: result.events };
   }
 
   getJoinableGames(): GetJoinableGamesResult {
@@ -181,21 +157,12 @@ export class Manager extends ManagerBase<Game> {
     if (game.status !== "created") {
       return { success: false, error: "invalidStatus" };
     }
-    if (game.players.length === MAX_PLAYERS) {
-      return { success: false, error: "maxPlayersReached" };
+    const result = joinGame(game, userId, username);
+    if (!result.success) {
+      return result;
     }
-    if (game.players.find((p) => p.userId === userId)) {
-      return { success: false, error: "alreadyInGame" };
-    }
-    const player: Player = {
-      id: crypto.randomUUID(),
-      userId,
-      username,
-      events: [],
-    };
-    game.players.push(player);
-    emitEvent(game, { type: "playerJoined", username });
-    return { success: true, playerId: player.id };
+    this.games.set(gameId, result.game);
+    return { success: true, playerId: result.playerId };
   }
 
   leaveGame(gameId: string, playerId: string): LeaveGameResult {
@@ -203,31 +170,14 @@ export class Manager extends ManagerBase<Game> {
     if (!game) {
       return { success: false, error: "gameNotFound" };
     }
-    const playerIndex = game.players.findIndex((p) => p.id === playerId);
-    if (playerIndex === -1) {
-      return { success: false, error: "playerNotFound" };
+    const result = leaveGame(game, playerId);
+    if (!result.success) {
+      return result;
     }
-
-    const player = game.players[playerIndex]!;
-    emitEvent(game, { type: "playerLeft", username: player.username });
-
-    game.players.splice(playerIndex, 1);
-
-    if (game.status === "started" && game.players.length < MIN_PLAYERS) {
-      const forfeitedGame: Game = {
-        ...game,
-        status: "forfeited",
-        expiresAt: Date.now() + EXPIRY_EXTENSION_MS,
-      };
-      this.games.set(game.id, forfeitedGame);
-      emitEvent(forfeitedGame, { type: "gameForfeited" });
-      emitEvent(forfeitedGame, {
-        type: "expirationUpdated",
-        expiresAt: forfeitedGame.expiresAt,
-      });
-    }
-    if (game.players.length === 0) {
-      this.games.delete(game.id);
+    if (result.game.players.length > 0) {
+      this.games.set(gameId, result.game);
+    } else {
+      this.games.delete(gameId);
     }
     return { success: true };
   }
@@ -237,17 +187,11 @@ export class Manager extends ManagerBase<Game> {
     if (!game) {
       return { success: false, error: "gameNotFound" };
     }
-    const player = game.players.find((p) => p.id === playerId);
-    if (!player) {
-      return { success: false, error: "playerNotFound" };
+    const result = sendChat(game, playerId, text);
+    if (!result.success) {
+      return result;
     }
-    const message: ChatMessage = {
-      id: crypto.randomUUID(),
-      username: player.username,
-      text,
-    };
-    game.chatMessages.push(message);
-    emitEvent(game, { type: "chat", message });
+    this.games.set(gameId, result.game);
     return { success: true };
   }
 
@@ -256,31 +200,14 @@ export class Manager extends ManagerBase<Game> {
     if (!game) {
       return { success: false, error: "gameNotFound" };
     }
-    const player = game.players.find((p) => p.id === playerId);
-    if (!player) {
-      return { success: false, error: "playerNotFound" };
-    }
     if (game.status !== "created") {
       return { success: false, error: "invalidStatus" };
     }
-    if (game.players.indexOf(player) !== 0) {
-      return { success: false, error: "playerNotAdmin" };
+    const result = startGame(game, playerId);
+    if (!result.success) {
+      return result;
     }
-    if (game.players.length < MIN_PLAYERS) {
-      return { success: false, error: "minPlayersNotReached" };
-    }
-
-    const startedGame: Game = {
-      ...game,
-      status: "started",
-      expiresAt: Date.now() + EXPIRY_EXTENSION_MS,
-    };
-    this.games.set(game.id, startedGame);
-    emitEvent(startedGame, { type: "gameStarted" });
-    emitEvent(startedGame, {
-      type: "expirationUpdated",
-      expiresAt: startedGame.expiresAt,
-    });
+    this.games.set(gameId, result.game);
     return { success: true };
   }
 }

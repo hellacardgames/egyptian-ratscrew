@@ -6,7 +6,6 @@ import {
   joinGame,
   leaveGame,
   MAX_PLAYERS,
-  sendChat,
   startGame,
 } from "../game/index.js";
 
@@ -17,7 +16,6 @@ export const createManager = createManagerFactory({
   getEventsAndClearAcknowledged,
   joinGame,
   leaveGame,
-  sendChat,
   startGame,
   createCustomActions: () => ({}),
 });

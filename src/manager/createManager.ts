@@ -19,5 +19,5 @@ export const createManager = createManagerFactory({
   leaveGame,
   sendChat,
   startGame,
-  createCustomActions: () => ({}),
+  addCustomActions: () => ({}),
 });

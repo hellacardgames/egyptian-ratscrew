@@ -1,6 +1,7 @@
-import { emitEvent } from "../lib/emitEvent.js";
+import { emitEvent } from "@hellacardgames/lib";
 import { EXPIRY_EXTENSION_MS, MIN_PLAYERS } from "../constants.js";
-import type { Game, StartedGame } from "../types/Game.js";
+import { transitionGameToStarted } from "../lib/transitionGameToStarted.js";
+import type { Game } from "../types/Game.js";
 
 export function startGame(game: Game, playerId: string) {
   const player = game.players.find((p) => p.id === playerId);
@@ -17,15 +18,15 @@ export function startGame(game: Game, playerId: string) {
     return { success: false, error: "minPlayersNotReached" } as const;
   }
 
-  const startedGame: StartedGame = {
-    ...game,
-    status: "started",
-    expiresAt: Date.now() + EXPIRY_EXTENSION_MS,
-  };
-  emitEvent(startedGame, { type: "gameStarted" });
-  emitEvent(startedGame, {
+  let startedGame = transitionGameToStarted(game);
+
+  startedGame = { ...startedGame, expiresAt: Date.now() + EXPIRY_EXTENSION_MS };
+
+  startedGame = emitEvent(startedGame, { type: "gameStarted" });
+  startedGame = emitEvent(startedGame, {
     type: "expirationUpdated",
     expiresAt: startedGame.expiresAt,
   });
+
   return { success: true, game: startedGame } as const;
 }

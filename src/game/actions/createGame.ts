@@ -17,6 +17,7 @@ export function createGame(userId: string, username: string) {
     expiresAt: createdAt + EXPIRY_EXTENSION_MS,
     chatMessages: [],
     players: [player],
+    currentPlayerIndex: 0,
   };
   return { game, playerId: player.id } as const;
 }

@@ -32,4 +32,9 @@ export type GameEvent =
       readonly type: "playerLeft";
       readonly id: string;
       readonly username: string;
+    }
+  | {
+      readonly type: "turnChanged";
+      readonly id: string;
+      readonly currentPlayerUsername: string;
     };

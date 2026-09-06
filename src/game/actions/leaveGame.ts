@@ -1,30 +1,35 @@
-import { emitEvent } from "../lib/emitEvent.js";
+import { emitEvent, getCurrentPlayer, removePlayer } from "@hellacardgames/lib";
 import { EXPIRY_EXTENSION_MS, MIN_PLAYERS } from "../constants.js";
+import { transitionGameToForfeited } from "../lib/transitionGameToForfeited.js";
 import type { Game } from "../types/Game.js";
 
 export function leaveGame(game: Game, playerId: string) {
-  const playerIndex = game.players.findIndex((p) => p.id === playerId);
-  if (playerIndex === -1) {
+  const player = game.players.find((p) => p.id === playerId);
+  if (!player) {
     return { success: false, error: "playerNotFound" } as const;
   }
 
-  const player = game.players[playerIndex]!;
-  emitEvent(game, { type: "playerLeft", username: player.username });
+  game = emitEvent(game, { type: "playerLeft", username: player.username });
 
-  game.players.splice(playerIndex, 1);
+  const removePlayerResult = removePlayer(game, player.id);
+  game = removePlayerResult.game;
+
+  if (removePlayerResult.turnChanged) {
+    game = emitEvent(game, {
+      type: "turnChanged",
+      currentPlayerUsername: getCurrentPlayer(game).username,
+    });
+  }
 
   if (game.status === "started" && game.players.length < MIN_PLAYERS) {
-    const forfeitedGame: Game = {
-      ...game,
-      status: "forfeited",
-      expiresAt: Date.now() + EXPIRY_EXTENSION_MS,
-    };
-    emitEvent(forfeitedGame, { type: "gameForfeited" });
-    emitEvent(forfeitedGame, {
+    game = transitionGameToForfeited(game);
+    game = { ...game, expiresAt: Date.now() + EXPIRY_EXTENSION_MS };
+    game = emitEvent(game, { type: "gameForfeited" });
+    game = emitEvent(game, {
       type: "expirationUpdated",
-      expiresAt: forfeitedGame.expiresAt,
+      expiresAt: game.expiresAt,
     });
-    return { success: true, game: forfeitedGame } as const;
   }
+
   return { success: true, game } as const;
 }

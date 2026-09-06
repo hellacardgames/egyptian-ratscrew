@@ -9,7 +9,8 @@ export type CreatedGame = {
   readonly createdAt: number;
   readonly expiresAt: number;
   readonly chatMessages: readonly ChatMessage[];
-  readonly players: Player[];
+  readonly players: readonly Player[];
+  readonly currentPlayerIndex: number;
 };
 
 export type StartedGame = {
@@ -18,7 +19,8 @@ export type StartedGame = {
   readonly createdAt: number;
   readonly expiresAt: number;
   readonly chatMessages: readonly ChatMessage[];
-  readonly players: Player[];
+  readonly players: readonly Player[];
+  readonly currentPlayerIndex: number;
 };
 
 export type CompletedGame = {
@@ -27,7 +29,8 @@ export type CompletedGame = {
   readonly createdAt: number;
   readonly expiresAt: number;
   readonly chatMessages: readonly ChatMessage[];
-  readonly players: Player[];
+  readonly players: readonly Player[];
+  readonly currentPlayerIndex: number;
 };
 
 export type ForfeitedGame = {
@@ -36,5 +39,6 @@ export type ForfeitedGame = {
   readonly createdAt: number;
   readonly expiresAt: number;
   readonly chatMessages: readonly ChatMessage[];
-  readonly players: Player[];
+  readonly players: readonly Player[];
+  readonly currentPlayerIndex: number;
 };

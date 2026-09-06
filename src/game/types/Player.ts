@@ -4,5 +4,5 @@ export type Player = {
   readonly id: string;
   readonly userId: string;
   readonly username: string;
-  readonly events: GameEvent[];
+  readonly events: readonly GameEvent[];
 };

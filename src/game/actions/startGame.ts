@@ -18,15 +18,14 @@ export function startGame(game: Game, playerId: string) {
     return { success: false, error: "minPlayersNotReached" } as const;
   }
 
-  let startedGame = transitionGameToStarted(game);
+  game = transitionGameToStarted(game);
+  game = emitEvent(game, { type: "gameStarted" });
 
-  startedGame = { ...startedGame, expiresAt: Date.now() + EXPIRY_EXTENSION_MS };
-
-  startedGame = emitEvent(startedGame, { type: "gameStarted" });
-  startedGame = emitEvent(startedGame, {
+  game = { ...game, expiresAt: Date.now() + EXPIRY_EXTENSION_MS };
+  game = emitEvent(game, {
     type: "expirationUpdated",
-    expiresAt: startedGame.expiresAt,
+    expiresAt: game.expiresAt,
   });
 
-  return { success: true, game: startedGame } as const;
+  return { success: true, game: game } as const;
 }

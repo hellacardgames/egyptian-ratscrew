@@ -6,6 +6,7 @@ export type ClientState = {
   readonly playerId: string;
   readonly username: string;
   readonly players: readonly Player[];
+  readonly currentPlayerUsername: string;
   readonly expiresAt: number;
   readonly chatMessages: readonly ChatMessage[];
 };

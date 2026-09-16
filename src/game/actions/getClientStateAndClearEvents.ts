@@ -1,6 +1,7 @@
 import {
   getClientStateAndClearEventsFactory,
   getCurrentPlayer,
+  requirePlayer,
 } from "@hellacardgames/lib";
 import type { ClientState } from "../types/ClientState.js";
 import type { Game } from "../types/Game.js";
@@ -16,6 +17,7 @@ export const getClientStateAndClearEvents = getClientStateAndClearEventsFactory<
   players: game.players.map((p) => ({
     username: p.username,
   })),
+  adminUsername: requirePlayer(game, game.adminId).player.username,
   currentPlayerUsername: getCurrentPlayer(game).username,
   expiresAt: game.expiresAt,
   chatMessages: game.chatMessages,

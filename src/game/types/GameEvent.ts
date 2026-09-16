@@ -2,6 +2,11 @@ import type { ChatMessage } from "./ChatMessage.js";
 
 export type GameEvent =
   | {
+      readonly type: "adminChanged";
+      readonly id: string;
+      readonly username: string;
+    }
+  | {
       readonly type: "chat";
       readonly id: string;
       readonly message: ChatMessage;
